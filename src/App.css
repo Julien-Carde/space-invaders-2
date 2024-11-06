@@ -1,0 +1,80 @@
+/* src/App.css */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: rgb(255, 255, 255);
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1 {
+  font-family: "Press Start 2P", cursive;
+  font-size: 24px;
+  font-weight: 300;
+  text-align: center;
+  margin-top: 50px;
+  margin-bottom: 50px;
+  color: rgb(0, 0, 0);
+}
+
+.instructions {
+  font-family:'Courier New', Courier, monospace;
+  margin-top: 30px;
+  text-align: left;
+  margin-left: 65px;
+  font-size: 15px;
+  line-height: 2;
+  color: rgb(0, 0, 0);
+}
+
+.start-message {
+  font-family: "Press Start 2P", cursive;
+  font-size: 20px;
+  font-weight: 100;
+  text-align: center;
+  color: white;
+}
+
+.score-display {
+  font-family: "Press Start 2P", cursive;
+  font-size: 16px;
+  color: white;
+}
+
+button {
+  font-family: "Press Start 2P", cursive;
+  padding: 15px 30px;
+  margin-top: 20px;
+  background: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background: #cccccc;
+  transform: scale(1.05);
+}
+
+.game-text {
+  font-family: "Press Start 2P", cursive;
+  color: white;
+}
+
+/* Add these rules at the end of App.css */
+*:focus {
+  outline: none;
+}
+
+div[tabIndex] {
+  outline: none;
+}
+
+/* For Safari and Firefox */
+div[tabIndex]:focus-visible {
+  outline: none;
+}
