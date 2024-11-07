@@ -1,4 +1,3 @@
-// src/Game.js
 import React, { useState, useEffect } from 'react';
 import Player from './Player';
 import Invader from './Invader';
@@ -28,30 +27,55 @@ function Game() {
 
   // Check for game over conditions
   useEffect(() => {
+    if (gameState !== 'playing') return; // Only check during active gameplay
+
     // Check if invaders reached the bottom
-    if (invaders.some(invader => invader.y >= 440)) {
+    if (invaders.some(invader => invader.y >= maxGameWidth * 0.8)) {
       setGameState('gameOver');
       if (score > highScore) {
         setHighScore(score);
         localStorage.setItem('highScore', score.toString());
       }
-      setLevel(1); // Reset level on game over
+      setLevel(1);
     }
     // Check if all invaders are destroyed
-    if (invaders.length === 0 && gameState === 'playing') {
+    else if (invaders.length === 0) {
       if (level === 1) {
+        console.log('Level 1 completed, advancing to level 2');
         setLevel(2);
-        resetGame();
-      } else {
+        const initialInvaders = [];
+        const rows = 4; // Level 2 has 4 rows
+        const invaderSize = 30;
+        
+        // Simplified spacing calculation for mobile
+        const gameWindow = document.querySelector('[style*="gameWindowStyle"]');
+        const availableWidth = gameWindow ? gameWindow.offsetWidth : maxGameWidth;
+        const totalInvaders = isMobile ? 7 : Math.floor((availableWidth - invaderSize) / (invaderSize * 1.5));
+        
+        // Calculate spacing to fit all invaders
+        const totalWidth = invaderSize * totalInvaders;
+        const spacing = (availableWidth - totalWidth) / (totalInvaders + 1);
+        
+        for (let row = 0; row < rows; row++) {
+          for (let i = 0; i < totalInvaders; i++) {
+            initialInvaders.push({ 
+              x: spacing + i * (invaderSize + spacing),
+              y: row * (invaderSize + 10) + 20
+            });
+          }
+        }
+        setInvaders(initialInvaders);
+        setInvaderDirection(1);
+      } else if (level === 2) {
+        console.log('Level 2 completed, showing victory screen');
         setGameState('victory');
         if (score > highScore) {
           setHighScore(score);
           localStorage.setItem('highScore', score.toString());
         }
-        setLevel(1); // Reset level for next game
       }
     }
-  }, [invaders, score, highScore, gameState, level]);
+  }, [invaders, score, highScore, gameState, level, maxGameWidth, isMobile]);
 
   // Update collision detection to include score
   useEffect(() => {
@@ -80,22 +104,33 @@ function Game() {
 
   // Reset game function
   const resetGame = () => {
-    setPlayerPosition(maxGameWidth / 2); // Center the player
+    console.log('Resetting game for level:', level);
+    setPlayerPosition(maxGameWidth / 2);
     setBullets([]);
+    
+    // Only reset score for new games
+    if (gameState !== 'playing') {
+      setScore(0);
+      setLevel(1);
+    }
+    
+    const rows = 3; // Always start with 3 rows for level 1
+    const invaderSize = 30;
+    const spacing = invaderSize * 1.5;
+    const invadersPerRow = isMobile ? 7 : Math.floor((maxGameWidth - spacing) / spacing);
+    
     const initialInvaders = [];
-    const rows = level === 1 ? 3 : 4;
-    const invadersPerRow = Math.floor(maxGameWidth / 80); // 80px spacing between invaders
     for (let row = 0; row < rows; row++) {
       for (let i = 0; i < invadersPerRow; i++) {
         initialInvaders.push({ 
-          x: i * 80 + 20, 
-          y: row * 60 + 20 
+          x: i * spacing,
+          y: row * (spacing * 0.8) + 20
         });
       }
     }
+    
     setInvaders(initialInvaders);
     setInvaderDirection(1);
-    setScore(0);
     setGameState('playing');
   };
 
@@ -105,18 +140,6 @@ function Game() {
       document.getElementById('start-screen').focus();
     }
   }, [gameState]);
-
-  // Initialize invaders
-  useEffect(() => {
-    const initialInvaders = [];
-    const rows = level === 1 ? 3 : 4;
-    for (let row = 0; row < rows; row++) {
-      for (let i = 0; i < 8; i++) {
-        initialInvaders.push({ x: i * 60 + 20, y: row * 60 + 20 });
-      }
-    }
-    setInvaders(initialInvaders);
-  }, [level]);
 
   // Handle player movement and shooting
   useEffect(() => {
@@ -151,31 +174,35 @@ function Game() {
 
   // Update invaders
   useEffect(() => {
+    const invaderSize = 30;
     const interval = setInterval(() => {
       setInvaders((invaders) => {
-        // Get the current game window width
         const gameWindow = document.querySelector('[style*="gameWindowStyle"]');
-        const maxWidth = gameWindow ? gameWindow.offsetWidth - 40 : 540; // 40px for invader width
-
-        // Change direction at edges
-        const atEdge = invaders.some(
-          (invader) => invader.x <= 0 || invader.x >= maxWidth
-        );
-        if (atEdge) {
+        const gameWidth = gameWindow ? gameWindow.offsetWidth : maxGameWidth;
+        
+        // Check if any invader would hit the boundaries after movement
+        const wouldHitBoundary = invaders.some(invader => {
+          const nextX = invader.x + (invaderDirection * 3);
+          return nextX <= 0 || (nextX + invaderSize) >= gameWidth;
+        });
+        
+        if (wouldHitBoundary) {
           setInvaderDirection((dir) => -dir);
           return invaders.map((invader) => ({
             ...invader,
             y: invader.y + 20,
           }));
         }
+        
         return invaders.map((invader) => ({
           ...invader,
-          x: invader.x + invaderDirection * 10,
+          x: invader.x + invaderDirection * 3,
         }));
       });
     }, 500);
+    
     return () => clearInterval(interval);
-  }, [invaderDirection]);
+  }, [invaderDirection, maxGameWidth]);
 
   // Add these new styles at the top of the component
   const gameContainerStyle = {
@@ -241,7 +268,10 @@ function Game() {
   };
 
   const handleMoveRight = () => {
-    setPlayerPosition((pos) => Math.min(pos + 20, 540));
+    const gameWindow = document.querySelector('[style*="gameWindowStyle"]');
+    const gameWidth = gameWindow ? gameWindow.offsetWidth : maxGameWidth;
+    const playerWidth = 50; // Width of player ship
+    setPlayerPosition((pos) => Math.min(pos + 20, gameWidth - playerWidth));
   };
 
   const handleShoot = () => {
@@ -326,6 +356,19 @@ function Game() {
     return () => window.removeEventListener('resize', updateGameWidth);
   }, []);
 
+  // Add level display to the game screen
+  const levelStyle = {
+    position: 'absolute',
+    top: '120px', // Position it below the score
+    left: '50%',
+    transform: 'translateX(-50%)',
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: "'Press Start 2P', cursive",
+    fontSize: '16px',
+    zIndex: 1,
+  };
+
   // Modify the return statements to include the new styles and controls
   if (gameState === 'start') {
     return (
@@ -333,15 +376,42 @@ function Game() {
         <div
           id="start-screen"
           style={gameWindowStyle}
-          onKeyDown={(e) => setGameState('playing')}
-          onClick={() => setGameState('playing')}
+          onKeyDown={() => {
+            setLevel(1); // Ensure we start at level 1
+            setGameState('playing');
+            resetGame();
+          }}
+          onClick={() => {
+            setLevel(1); // Ensure we start at level 1
+            setGameState('playing');
+            resetGame();
+          }}
           tabIndex="0"
         >
-          <h3 className='start-message'>
+          <h3 className='start-message' style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 1)',
+            fontFamily: "'Press Start 2P', cursive",
+            margin: 0
+          }}>
             {isMobile ? 'Tap to start' : 'Press any key to start'}
           </h3>
-          <p style={{ fontFamily: 'Press Start 2P', fontSize: '16px', textAlign: 'center' }}>
-            <span style={{ fontFamily: "'Press Start 2P', cursive" }}>High Score: {highScore}</span>
+          <p style={{
+            position: 'absolute',
+            top: '60%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 1)',
+            fontFamily: "'Press Start 2P', cursive",
+            fontSize: '16px',
+            margin: 0
+          }}>
+            High Score: {highScore}
           </p>
         </div>
       </div>
@@ -359,7 +429,11 @@ function Game() {
             <div style={scoreTextStyle}>Score: {score}</div>
             <button 
               style={playAgainButtonStyle}
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                setLevel(1);
+                setGameState('start');
+                setScore(0);
+              }}
             >
               Play Again
             </button>
